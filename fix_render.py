@@ -1,6 +1,8 @@
-# schemas.py
-# This module defines the Pydantic schemas for request/response validation
-# Updated for Pydantic v1.10.7 compatibility with Python 3.11.7
+import yaml
+from pathlib import Path
+
+content = '''# schemas.py
+# Pydantic v1 compatible schemas for FastAPI Task Management System
 
 from pydantic import BaseModel, validator
 from typing import Optional, List
@@ -78,3 +80,19 @@ class TaskListResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
+'''
+
+(Path('schemas.py')).write_text(content, encoding='utf-8')
+
+render_file = Path('render.yaml')
+if render_file.exists():
+    data = yaml.safe_load(render_file.read_text(encoding='utf-8'))
+    if 'services' in data and isinstance(data['services'], list) and data['services']:
+        data['services'][0]['runtime'] = 'python-3.11'
+        envVars = [v for v in data['services'][0].get('envVars', []) if v.get('key') != 'PYTHON_VERSION']
+        envVars.append({'key': 'PYTHON_VERSION', 'value': '3.11.7'})
+        data['services'][0]['envVars'] = envVars
+    render_file.write_text(yaml.dump(data, sort_keys=False), encoding='utf-8')
+
+Path('.python-version').write_text('3.11.7\n', encoding='utf-8')
+print('✅ Updated schemas.py, render.yaml, .python-version')

@@ -44,7 +44,7 @@ class TaskResponse(TaskBase):
     
     # Configuration for Pydantic to work with ORM models
     class Config:
-        from_attributes = True  # Allows Pydantic to read ORM model attributes
+             orm_mode = True  # Allows Pydantic to read ORM model attributes
 
 
 class TaskListResponse(BaseModel):

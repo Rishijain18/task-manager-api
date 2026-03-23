@@ -1,44 +1,34 @@
 # database.py
-# This module handles database configuration and session management
 
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from typing import Generator
 
-# SQLite database URL - creates a SQLite database file named task_manager.db
-DATABASE_URL = "sqlite:///./task_manager.db"
+# Get database URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create the database engine
-# connect_args={"check_same_thread": False} is needed for SQLite to allow
-# multiple threads to access the database (required for FastAPI async operations)
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+# Fix Render postgres URL issue
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
-# Session factory for creating database sessions
+# Create engine
+engine = create_engine(DATABASE_URL)
+
+# Session
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine
 )
 
-# Base class for all ORM models
+# Base
 Base = declarative_base()
 
-
-# Dependency injection function to get database session
-# This function can be injected into FastAPI route handlers using Depends()
+# Dependency
 def get_db() -> Generator:
-    """
-    Dependency function that provides a database session to route handlers.
-    
-    Yields:
-        SQLAlchemy Session: A database session for the request
-    """
     db = SessionLocal()
     try:
         yield db
     finally:
-        # Always close the session after the request is complete
         db.close()

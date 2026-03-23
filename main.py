@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 from database import engine, get_db, Base
 from schemas import TaskCreate, TaskUpdate, TaskResponse, TaskListResponse
 from crud import TaskCRUD
+from auth import hash_password, verify_password, create_access_token
+from models import User
+from schemas import UserCreate, UserLogin, Token
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -173,3 +176,21 @@ async def http_exception_handler(request, exc):
         status_code=exc.status_code,
         content={"detail": exc.detail}
     )
+
+@app.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = User(email=user.email, password=hash_password(user.password))
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return {"message": "User created"}
+
+@app.post("/login", response_model=Token)
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+
+    if not db_user or not verify_password(user.password, db_user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    token = create_access_token({"sub": user.email})
+    return {"access_token": token, "token_type": "bearer"}
